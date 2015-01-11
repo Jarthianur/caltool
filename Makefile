@@ -3,7 +3,7 @@
 CFLAGS = -g -Wall
 LDFLAGS =
 EXECUTABLE = caltool
-_OBJ = caltool.o fbutils.o font_8x8.o touch.o matrix.o
+_OBJ = caltool.o cmdline_parser.o fbutils.o font_8x8.o touch.o matrix.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 LIBS = -lncurses -lmenu -ltinfo -linput -ludev
 ODIR = obj
@@ -22,5 +22,6 @@ caltool: $(OBJ)
 
 clean:
 	rm -rf *.o *~ core $(EXECUTABLE)
+	rm $(ODIR)/*.o
 	
 .PHONY: clean all
