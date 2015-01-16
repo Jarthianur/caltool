@@ -26,3 +26,4 @@ int open_restricted(const char *, int, void *);
 void close_restricted(int , void *);
 int open_udev(struct libinput **);
 void finish_calibration (struct calibrator *, struct weston_matrix *);
+void rotate_calibration_matrix(struct weston_matrix *, int );

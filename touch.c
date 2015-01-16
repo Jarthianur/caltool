@@ -141,22 +141,46 @@ finish_calibration (struct calibrator *calibrator, struct weston_matrix *cal_mat
 	
 }
 
+void 
+rotate_calibration_matrix(struct weston_matrix *cal_matrix, int rotation)
+{
+	struct weston_matrix rot_matrix;
+	
+	memset(&rot_matrix, 0, sizeof(rot_matrix));
+	
+	if (rotation == 90)
+	{
+		// define rotation matrix
+		rot_matrix.d[1] = 1;
+		rot_matrix.d[4] = -1;
+		rot_matrix.d[8] = 1;
+		rot_matrix.d[10] = 1;
+		rot_matrix.d[16] = 1;
+		
+		// multiply matrix
+		weston_matrix_multiply(cal_matrix, &rot_matrix);
+	}
+}
 
-void get_touch_coordinates(struct libinput_event *ev, struct calibrator *calibrator)
+void 
+get_touch_coordinates(struct libinput_event *ev, struct calibrator *calibrator)
 {
 	struct libinput_event_touch *t = libinput_event_get_touch_event(ev);
-	double x;
-	double y;
+	double x,x_raw;
+	double y,y_raw;
 	
 	// get current screen coordinates
 	x = libinput_event_touch_get_x_transformed(t, xres);
 	y = libinput_event_touch_get_y_transformed(t, yres);
 	
+	x_raw = libinput_event_touch_get_x(t);
+	y_raw = libinput_event_touch_get_y(t);
+	
 	// write to current test ratio
 	calibrator->tests[calibrator->current_test].clicked_x = (int) x;
 	calibrator->tests[calibrator->current_test].clicked_y = (int) y;
 	
-	fprintf(fp_log,"Iteration: %d Clicked X,Y: %f, %f    Drawn X,Y: %f, %f\n",calibrator->current_test, x,y, calibrator->tests[calibrator->current_test].drawn_x,calibrator->tests[calibrator->current_test].drawn_y);
+	fprintf(fp_log,"Iteration: %d Clicked X,Y: %f (%f), %f (%f)    Drawn X,Y: %f, %f\n",calibrator->current_test, x,x_raw,y,y_raw, calibrator->tests[calibrator->current_test].drawn_x,calibrator->tests[calibrator->current_test].drawn_y);
 }
 
 int 
