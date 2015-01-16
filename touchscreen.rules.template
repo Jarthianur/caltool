@@ -14,4 +14,4 @@
 #
 
 # Create a symlink to any touchscreen input device
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{name}=="sun4i-ts",
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{name}=="sun4i-ts"
