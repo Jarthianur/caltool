@@ -31,7 +31,7 @@ void cmdline_parser(int argc, char **argv, int *rotation){
 	
 	const char* Usage = "\n"\
     "  -v              print version information\n"\
-	"  -r [rotation]   sets rotation of touch calibration\n"\
+	"  -r [rotation]   sets rotation of touch calibration default=landscape \n"\
 	"\n";
 	
 	// check commandline arguments

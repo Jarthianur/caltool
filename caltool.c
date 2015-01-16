@@ -1,3 +1,22 @@
+/*  
+	caltool - Touch screen calibration tool for XCSoar Glide Computer - http://www.openvario.org/
+    Copyright (C) 2014  The openvario project
+    A detailed list of copyright holders can be found in the file "AUTHORS" 
+
+    This program is free software; you can redistribute it and/or 
+    modify it under the terms of the GNU General Public License 
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, see <http://www.gnu.org/licenses/>.
+*/
+
 
 #include <errno.h>
 #include <stdio.h>
@@ -9,13 +28,12 @@
 #include <sys/mman.h>
 #include <sys/time.h>
 #include <time.h>
-//#include <linux/vt.h>
-//#include <linux/kd.h>
 #include <linux/fb.h>
 
 #include "fbutils.h"
 #include "touch.h"
 #include "matrix.h"
+#include "cmdline_parser.h"
 
 #include <libinput.h>
 #include <libudev.h>
@@ -109,7 +127,7 @@ sample_cal_values(struct libinput *li, struct calibrator *calibrator)
 	close(fds[1].fd);
 }
 
-int main()
+int main(int argc, char **argv)
 {
 	// libinput
 	struct libinput *li;
@@ -120,6 +138,7 @@ int main()
 	unsigned int i;
 	char buf[10];
 	int nread;
+	int rotation=0;
 	
 	FILE* fd = NULL;
 	FILE* fp_template = NULL;
@@ -131,6 +150,7 @@ int main()
 	
 	// initialize matrix
 	memset(&cal_matrix, 0, sizeof(cal_matrix));
+	cal_matrix.d[15] = 1;
 	
 	// open file for logging
 	fp_log=fopen("caltool.log","w");
@@ -153,13 +173,20 @@ int main()
 	//log screen size 
 	fprintf(fp_log,"detected Resolution: x=%d y=%d\n", xres, yres);
 	
+	// get commandline options
+	cmdline_parser(argc, argv, &rotation);
+	
+	//log parameter
+	fprintf(fp_log,"rotation: %d degree\n", rotation);
+	
+	// print user guideance
 	put_string_center (xres / 2, yres / 4, "Touch Calibration Tool", 1);
 	put_string_center (xres / 2, yres / 4 + 20, "Touch crosshair to calibrate", 2);
 	
 	//open libinput device
 	if (open_udev(&li))
 			return 1;
-
+	
 	// sample values for calibration
 	sample_cal_values(li, &calibrator);
 			
@@ -171,6 +198,10 @@ int main()
 	fprintf(fd,"%f %f %f %f %f %f\n", x_calib.f[0], x_calib.f[1], (x_calib.f[2]/xres), y_calib.f[0], y_calib.f[1], (y_calib.f[2]/yres));
 	fclose(fd);*/
 	
+	
+	// rotate matrix if necessary
+	rotate_calibration_matrix(&cal_matrix, rotation);
+
 	// open udev files
 	fp_template = fopen(udev_template, "r");
 	if (fp_template == NULL) {
@@ -194,7 +225,7 @@ int main()
 		fseek(fp_udev, -1, SEEK_CUR);
 		
 		// add calibration data
-		fprintf(fp_udev,"ENV{LIBINPUT_CALIBRATION_MATRIX}=");
+		fprintf(fp_udev,", ENV{LIBINPUT_CALIBRATION_MATRIX}=");
 		fprintf(fp_udev,"\"%f %f %f %f %f %f\"", 
 			cal_matrix.d[0], cal_matrix.d[4], cal_matrix.d[8],
 			cal_matrix.d[1], cal_matrix.d[5], cal_matrix.d[9]);
