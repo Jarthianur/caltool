@@ -17,4 +17,4 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.	
 */
 
-void cmdline_parser(int argc, char **argv, int *);
+void cmdline_parser(int argc, char **argv, int *, int *, char *);

@@ -24,18 +24,20 @@
 #include <string.h>
 
 
-void cmdline_parser(int argc, char **argv, int *rotation){
+void cmdline_parser(int argc, char **argv, int *rotation, int *use_calfile, char *cal_file){
 
 	// locale variables
 	int c;
+	int rot;
 	
 	const char* Usage = "\n"\
-    "  -v              print version information\n"\
-	"  -r [rotation]   sets rotation of touch calibration default=landscape \n"\
+    "  -v              			print version information\n"\
+	"  -c [calibration file]	specify file for calibration\n" \
+	"  -r [rotation]   			sets rotation of touch calibration default=landscape \n"\
 	"\n";
 	
 	// check commandline arguments
-	while ((c = getopt (argc, argv, "vr:")) != -1)
+	while ((c = getopt (argc, argv, "vr:c:")) != -1)
 	{
 		switch (c) {
 			case 'v':
@@ -46,24 +48,39 @@ void cmdline_parser(int argc, char **argv, int *rotation){
 				printf("This is free software, and you are welcome to redistribute it under certain conditions;\n"); 
 				exit(EXIT_FAILURE);
 				break;
-				
+			// calibration file
+			case 'c':
+				if (optarg != NULL)
+				{
+					strcpy(cal_file, optarg);
+				}
+				else
+				{
+					printf("Error: Argument needed !!\n");
+					printf("Exiting ...\n");
+					exit(EXIT_FAILURE);
+				}
+			break;
 			// screen rotation
 			case 'r':
 				if (optarg != NULL)
 				{
-					if (strcmp(optarg, "landscape") == 0)
-					{
-						*rotation = 0;
-						break;
+					// convert input parameter to string
+					rot = atoi(optarg);
+					switch (rot){
+						case 0:
+						case 1:
+						case 2:
+						case 3:
+							*rotation = rot;
+							break;
+						default:
+							printf("Error: Unknown argument for -r !!\n");
+							printf("Exiting ...\n");
+							exit(EXIT_FAILURE);
+							break;	
 					}
-					else if (strcmp(optarg, "portrait") == 0)
-					{
-						*rotation = 90;
-						break;
-					}
-					printf("Error: Unknown argument for -r !!\n");
-					printf("Exiting ...\n");
-					exit(EXIT_FAILURE);
+					*use_calfile = 1;
 				}
 				else
 				{

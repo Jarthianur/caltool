@@ -45,6 +45,7 @@ int events=0;
 int got_sample = 0;
 
 FILE* fp_log = NULL;
+FILE* cal_file = NULL;
 
 int verbose = 1;
 const char *seat = "seat0";
@@ -139,12 +140,13 @@ int main(int argc, char **argv)
 	char buf[10];
 	int nread;
 	int rotation=0;
+	int use_calfile=0;
 	
-	FILE* fd = NULL;
 	FILE* fp_template = NULL;
 	FILE* fp_udev = NULL;
+	FILE* fp_cal = NULL;
 	
-	char cal_file[] = "touch.cal";
+	char cal_file[255]="";
 	char udev_template[] = "touchscreen.rules.template";
 	char udev_rule[] = "touchscreen.rules";
 	
@@ -158,91 +160,114 @@ int main(int argc, char **argv)
 	{
 		printf("Error opening logfile !!\n");
 		return 1;
-	}	
-	fprintf(fp_log, "Start calibration ...\n");
-	
-	// open framebuffer
-	if (open_framebuffer()) {
-		close_framebuffer();
-		exit(1);
 	}
-	
-	for (i = 0; i < NR_COLORS; i++)
-		setcolor (i, palette [i]);
-	
-	//log screen size 
-	fprintf(fp_log,"detected Resolution: x=%d y=%d\n", xres, yres);
-	
-	// get commandline options
-	cmdline_parser(argc, argv, &rotation);
-	
-	//log parameter
-	fprintf(fp_log,"rotation: %d degree\n", rotation);
-	
-	// print user guideance
-	put_string_center (xres / 2, yres / 4, "Touch Calibration Tool", 1);
-	put_string_center (xres / 2, yres / 4 + 20, "Touch crosshair to calibrate", 2);
-	
-	//open libinput device
-	if (open_udev(&li))
-			return 1;
-	
-	// sample values for calibration
-	sample_cal_values(li, &calibrator);
-			
-	// calculate calibration values
-	finish_calibration(&calibrator, &cal_matrix);
-	
-	// write calibration values to file
-	/*fd = fopen(cal_file,"w");
-	fprintf(fd,"%f %f %f %f %f %f\n", x_calib.f[0], x_calib.f[1], (x_calib.f[2]/xres), y_calib.f[0], y_calib.f[1], (y_calib.f[2]/yres));
-	fclose(fd);*/
-	
-	
-	// rotate matrix if necessary
-	rotate_calibration_matrix(&cal_matrix, rotation);
 
-	// open udev files
-	fp_template = fopen(udev_template, "r");
-	if (fp_template == NULL) {
-		fprintf(fp_log, "Error opening template file !!\n");
-	}
+	// get commandline options
+	cmdline_parser(argc, argv, &rotation, &use_calfile, cal_file);
 	
-	fp_udev = fopen(udev_rule, "w");
-	if (fp_udev == NULL) {
-		fprintf(fp_log, "Error opening udev output file !!\n");
-	}
+	fprintf(fp_log,"Using cal file: %s\n", cal_file);
 	
-	// combine template and calibration data
-	if ((fp_template != NULL) && (fp_udev != NULL))
+	if ( *cal_file == '\n')
 	{
-		// copy template to output file
-		while((nread = fread(buf, 1, sizeof(buf), fp_template)) > 0) {
-			fwrite(buf, 1, nread, fp_udev);
+		printf("Error no cal file specified !!\n");
+		return 1;
+	}
+	
+	// check if we use an external cal file
+	if (use_calfile == 1)
+	{
+		fprintf(fp_log,"Getting cal from file\n");
+		fp_cal = fopen(cal_file,"r");
+		fread(&cal_matrix, sizeof(struct weston_matrix), 1, fp_cal);
+		
+		// rotate matrix
+		fprintf(fp_log,"Rotation is: %d\n", rotation);
+		
+		// rotate matrix if necessary
+		rotate_calibration_matrix(&cal_matrix, rotation);
+		
+		// open udev files
+		fp_template = fopen(udev_template, "r");
+		if (fp_template == NULL) {
+			fprintf(fp_log, "Error opening template file !!\n");
 		}
 		
-		// 
-		fseek(fp_udev, -1, SEEK_CUR);
+		fp_udev = fopen(udev_rule, "w");
+		if (fp_udev == NULL) {
+			fprintf(fp_log, "Error opening udev output file !!\n");
+		}
 		
-		// add calibration data
-		fprintf(fp_udev,", ENV{LIBINPUT_CALIBRATION_MATRIX}=");
-		fprintf(fp_udev,"\"%f %f %f %f %f %f\"", 
-			cal_matrix.d[0], cal_matrix.d[4], cal_matrix.d[8],
-			cal_matrix.d[1], cal_matrix.d[5], cal_matrix.d[9]);
+		// combine template and calibration data
+		if ((fp_template != NULL) && (fp_udev != NULL))
+		{
+			// copy template to output file
+			while((nread = fread(buf, 1, sizeof(buf), fp_template)) > 0) {
+				fwrite(buf, 1, nread, fp_udev);
+			}
+			
+			// 
+			fseek(fp_udev, -1, SEEK_CUR);
+			
+			// add calibration data
+			fprintf(fp_udev,", ENV{LIBINPUT_CALIBRATION_MATRIX}=");
+			fprintf(fp_udev,"\"%f %f %f %f %f %f\"", 
+				cal_matrix.d[0], cal_matrix.d[4], cal_matrix.d[8],
+				cal_matrix.d[1], cal_matrix.d[5], cal_matrix.d[9]);
+		}
+
+		// close files
+		fclose(fp_udev);
+		fclose(fp_template);
+		
 	}
-
-	// close files
-	fclose(fp_udev);
-	fclose(fp_template);
-				
-	// close udev
-	libinput_unref(li);
-	if (udev)
-		udev_unref(udev);
+	else
+	{
+		fprintf(fp_log, "Start calibration ...\n");
 		
-	// close framebuffer
-	close_framebuffer();
-
+		// open framebuffer
+		if (open_framebuffer()) {
+			close_framebuffer();
+			exit(1);
+		}
+		
+		for (i = 0; i < NR_COLORS; i++)
+			setcolor (i, palette [i]);
+		
+		//log screen size 
+		fprintf(fp_log,"detected Resolution: x=%d y=%d\n", xres, yres);
+		
+		
+		//log parameter
+		fprintf(fp_log,"rotation: %d degree\n", rotation);
+		
+		// print user guideance
+		put_string_center (xres / 2, yres / 4, "Touch Calibration Tool", 1);
+		put_string_center (xres / 2, yres / 4 + 20, "Touch crosshair to calibrate", 2);
+		
+		//open libinput device
+		if (open_udev(&li))
+				return 1;
+		
+		// sample values for calibration
+		sample_cal_values(li, &calibrator);
+				
+		// calculate calibration values
+		finish_calibration(&calibrator, &cal_matrix);
+		
+		// write calibration values to file
+		fp_cal = fopen(cal_file,"w");
+		fwrite(&cal_matrix, sizeof(struct weston_matrix), 1, fp_cal);
+		//fprintf(fd,"%f %f %f %f %f %f\n", x_calib.f[0], x_calib.f[1], (x_calib.f[2]/xres), y_calib.f[0], y_calib.f[1], (y_calib.f[2]/yres));
+		fclose(fp_cal);
+					
+		// close udev
+		libinput_unref(li);
+		if (udev)
+			udev_unref(udev);
+			
+		// close framebuffer
+		close_framebuffer();
+	}
 	// close logfile
 	fclose(fp_log);
 	return 0;
