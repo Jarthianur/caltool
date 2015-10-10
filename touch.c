@@ -148,18 +148,45 @@ rotate_calibration_matrix(struct weston_matrix *cal_matrix, int rotation)
 	
 	memset(&rot_matrix, 0, sizeof(rot_matrix));
 	
-	if (rotation == 90)
+	switch (rotation) {
+		case 0:
+		break;
+		case 1: // 90 deg
+			// define rotation matrix
+			rot_matrix.d[1] = 1;
+			rot_matrix.d[4] = -1;
+			rot_matrix.d[8] = 1;
+			rot_matrix.d[10] = 1;
+			rot_matrix.d[15] = 1;
+			break;
+		case 2: // 180 deg
+			// define rotation matrix
+			rot_matrix.d[0] = -1;
+			rot_matrix.d[2] = 1;
+			rot_matrix.d[5] = -1;
+			rot_matrix.d[6] = 1;
+			rot_matrix.d[8] = 1;
+			rot_matrix.d[9] = 1;
+			rot_matrix.d[10] = 1;
+			rot_matrix.d[15] = 1;
+			break;
+		case 3: // 270 deg	// Still buggy !!!
+			// define rotation matrix
+			rot_matrix.d[1] = -1;
+			//rot_matrix.d[2] = -1;
+			rot_matrix.d[4] = 1;
+			//rot_matrix.d[8] = 1;
+			rot_matrix.d[10] = 1;
+			rot_matrix.d[15] = 1;
+			break;
+	}
+	
+	if (rotation > 0)
 	{
-		// define rotation matrix
-		rot_matrix.d[1] = 1;
-		rot_matrix.d[4] = -1;
-		rot_matrix.d[8] = 1;
-		rot_matrix.d[10] = 1;
-		rot_matrix.d[16] = 1;
-		
 		// multiply matrix
 		weston_matrix_multiply(cal_matrix, &rot_matrix);
 	}
+	
 }
 
 void 
