@@ -22,6 +22,6 @@ caltool: $(OBJ)
 
 clean:
 	rm -rf *.o *~ core $(EXECUTABLE)
-	rm $(ODIR)/*.o
+	rm -f $(ODIR)/*.o
 	
 .PHONY: clean all
